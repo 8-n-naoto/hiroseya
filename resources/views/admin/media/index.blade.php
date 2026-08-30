@@ -1,101 +1,115 @@
 <x-layouts.admin title="画像ライブラリ">
-    <section class="mb-8 rounded-lg border border-stone-200 bg-white p-5">
-        <h2 class="mb-4 text-sm font-semibold text-stone-700">画像をアップロード</h2>
-        <form method="POST" action="{{ route('admin.media.store') }}" enctype="multipart/form-data"
-            class="grid grid-cols-1 gap-4 sm:grid-cols-4 sm:items-end">
-            @csrf
+    <x-admin.page-header title="画像ライブラリ"
+        description="料理・お知らせ・イベント・トップページで使う画像をここにまとめます。アップロードすると、表示用のWebPが自動で作られます。">
+        <x-slot:actions>
+            @if ($missingAltCount > 0)
+                <a href="{{ route('admin.media.index', ['missing_alt' => 1]) }}"
+                    class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    代替テキスト未入力 {{ $missingAltCount }}件
+                </a>
+            @endif
+        </x-slot:actions>
+    </x-admin.page-header>
 
-            <div class="sm:col-span-2">
-                <label class="mb-1 block text-xs font-medium text-stone-600">画像ファイル</label>
-                <input type="file" name="file" accept="image/jpeg,image/png,image/webp" required
-                    class="w-full text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-stone-800 file:px-3 file:py-1.5 file:text-xs file:text-white">
-            </div>
+    <div class="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div class="space-y-6">
+            <x-admin.card title="画像をアップロード"
+                description="まとめて選べます。1枚あたり8MBまで、JPEG・PNG・WebPに対応しています。">
+                <form method="POST" action="{{ route('admin.media.store') }}" enctype="multipart/form-data" class="space-y-4">
+                    @csrf
 
-            <div>
-                <label class="mb-1 block text-xs font-medium text-stone-600">保存先（dishes / news / home など）</label>
-                <input type="text" name="directory" placeholder="uploads"
-                    class="w-full rounded-md border border-stone-300 px-3 py-1.5 text-sm">
-            </div>
+                    <x-admin.field label="画像ファイル" name="files" required>
+                        <input type="file" name="files[]" multiple required
+                            accept="image/jpeg,image/png,image/webp"
+                            class="block w-full text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-stone-800 file:px-3 file:py-2 file:text-xs file:text-white">
+                    </x-admin.field>
 
-            <div>
-                <label class="mb-1 block text-xs font-medium text-stone-600">alt（代替テキスト）</label>
-                <input type="text" name="alt" maxlength="191"
-                    class="w-full rounded-md border border-stone-300 px-3 py-1.5 text-sm">
-            </div>
-
-            <div class="sm:col-span-4">
-                <button type="submit"
-                    class="rounded-md bg-stone-800 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">
-                    アップロード
-                </button>
-                <span class="ml-3 text-xs text-stone-400">
-                    最大 {{ number_format(config('hiroseya.images.max_upload_kb', 8192) / 1024, 1) }}MB。自動でWebPの3サイズを生成します。
-                </span>
-            </div>
-        </form>
-    </section>
-
-    <section class="mb-4 flex flex-wrap items-center gap-3 text-sm">
-        <form method="GET" action="{{ route('admin.media.index') }}" class="flex flex-wrap items-center gap-2">
-            <select name="directory" onchange="this.form.submit()"
-                class="rounded-md border border-stone-300 px-2 py-1 text-sm">
-                <option value="">すべてのフォルダ</option>
-                @foreach ($directories as $dir)
-                    <option value="{{ $dir }}" @selected($directory === $dir)>{{ $dir }}</option>
-                @endforeach
-            </select>
-
-            <label class="flex items-center gap-1 text-stone-600">
-                <input type="checkbox" name="missing_alt" value="1" onchange="this.form.submit()" @checked($missingAlt)>
-                alt未入力のみ
-            </label>
-        </form>
-    </section>
-
-    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        @forelse ($media as $item)
-            <div class="overflow-hidden rounded-lg border border-stone-200 bg-white">
-                <div class="aspect-square bg-stone-100">
-                    <img src="{{ $item->variantUrl('sm') }}" alt="{{ $item->alt }}" loading="lazy"
-                        class="h-full w-full object-cover">
-                </div>
-                <div class="space-y-2 p-3">
-                    <form method="POST" action="{{ route('admin.media.update', $item) }}">
-                        @csrf
-                        @method('PATCH')
-
-                        <input type="text" name="alt" value="{{ $item->alt }}" placeholder="altを入力"
-                            class="w-full rounded border px-2 py-1 text-xs {{ $item->isMissingAlt() ? 'border-amber-400 bg-amber-50' : 'border-stone-200' }}">
-
-                        <div class="mt-1">
-                            <button type="submit" class="text-xs text-stone-500 underline hover:text-stone-700">保存</button>
-                        </div>
-                    </form>
-
-                    @if (!empty($usages[$item->id]))
-                        <ul class="space-y-0.5 text-[11px] text-stone-500">
-                            @foreach ($usages[$item->id] as $label)
-                                <li>使用中: {{ $label }}</li>
+                    <x-admin.field label="保存先" name="directory"
+                        help="dishes（料理）・news（お知らせ）・home（トップページ）のように、半角英数字で分けておくと後で探しやすくなります。">
+                        <x-admin.input name="directory" list="directories" value="{{ old('directory', $directory ?: 'dishes') }}" />
+                        <datalist id="directories">
+                            @foreach ($directories as $dir)
+                                <option value="{{ $dir }}"></option>
                             @endforeach
-                        </ul>
-                    @else
-                        <p class="text-[11px] text-stone-400">未使用</p>
+                        </datalist>
+                    </x-admin.field>
 
-                        <form method="POST" action="{{ route('admin.media.destroy', $item) }}"
-                            onsubmit="return confirm('この画像を削除しますか？');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="text-xs text-red-500 underline hover:text-red-700">削除</button>
-                        </form>
-                    @endif
+                    <x-admin.field label="代替テキスト（まとめて設定）" name="alt"
+                        help="画像の内容を短く説明する文です。目の不自由な方の読み上げに使われ、検索エンジンにも画像の内容が伝わります。例：「土鍋に入った味噌煮込みうどん」">
+                        <x-admin.input name="alt" value="{{ old('alt') }}" />
+                    </x-admin.field>
+
+                    <x-admin.button>アップロード</x-admin.button>
+                </form>
+            </x-admin.card>
+
+            <x-admin.card title="絞り込み">
+                <form method="GET" action="{{ route('admin.media.index') }}" class="space-y-4">
+                    <x-admin.field label="キーワード" name="q">
+                        <x-admin.input name="q" value="{{ $keyword }}" placeholder="ファイル名・代替テキスト" />
+                    </x-admin.field>
+
+                    <x-admin.field label="保存先" name="directory">
+                        <x-admin.select name="directory" placeholder="すべて" :selected="$directory"
+                            :options="collect($directories)->mapWithKeys(fn ($d) => [$d => $d])->all()" />
+                    </x-admin.field>
+
+                    <x-admin.checkbox name="missing_alt" label="代替テキストが未入力のものだけ" :checked="$missingAlt" />
+
+                    <div class="flex gap-2">
+                        <x-admin.button>絞り込む</x-admin.button>
+                        <x-admin.button variant="secondary" :href="route('admin.media.index')">解除</x-admin.button>
+                    </div>
+                </form>
+            </x-admin.card>
+        </div>
+
+        <div>
+            @if ($media->isEmpty())
+                <x-admin.empty message="画像がありません。左のフォームからアップロードしてください。" />
+            @else
+                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    @foreach ($media as $item)
+                        <x-admin.card :padding="false">
+                            <img src="{{ $item->variantUrl('sm') }}" alt="{{ $item->alt }}" loading="lazy"
+                                class="aspect-[4/3] w-full rounded-t-lg object-cover">
+
+                            <div class="space-y-3 p-4">
+                                <p class="truncate text-xs text-stone-500" title="{{ $item->path }}">
+                                    {{ $item->original_name ?: $item->path }}
+                                </p>
+
+                                <form method="POST" action="{{ route('admin.media.update', $item) }}" class="space-y-2">
+                                    @csrf @method('PATCH')
+                                    <x-admin.input name="alt" value="{{ $item->alt }}" placeholder="代替テキスト"
+                                        class="{{ $item->isMissingAlt() ? 'border-amber-400 bg-amber-50' : '' }}" />
+                                    <x-admin.input name="caption" value="{{ $item->caption }}" placeholder="キャプション（任意）" />
+                                    <button class="text-xs text-stone-600 underline">保存</button>
+                                </form>
+
+                                @if (! empty($usages[$item->id]))
+                                    <div class="rounded bg-stone-50 px-2 py-1.5">
+                                        <p class="text-[11px] font-medium text-stone-600">使用中</p>
+                                        <ul class="mt-0.5 space-y-0.5 text-[11px] text-stone-500">
+                                            @foreach ($usages[$item->id] as $usage)
+                                                <li class="truncate">{{ $usage }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                @else
+                                    <form method="POST" action="{{ route('admin.media.destroy', $item) }}"
+                                        onsubmit="return confirm('この画像を削除します。よろしいですか？');">
+                                        @csrf @method('DELETE')
+                                        <button class="text-xs text-red-600 underline">削除</button>
+                                    </form>
+                                @endif
+                            </div>
+                        </x-admin.card>
+                    @endforeach
                 </div>
-            </div>
-        @empty
-            <p class="col-span-full py-10 text-center text-sm text-stone-400">まだ画像がありません。</p>
-        @endforelse
-    </div>
 
-    <div class="mt-6">
-        {{ $media->links() }}
+                <div class="mt-6">{{ $media->links() }}</div>
+            @endif
+        </div>
     </div>
 </x-layouts.admin>

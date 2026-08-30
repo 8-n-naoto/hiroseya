@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="広瀬屋">
+  <rect width="64" height="64" fill="#26333f"/>
+  <!-- 暖簾。上の横木と、三枚に割れた布。 -->
+  <rect x="10" y="16" width="44" height="4" fill="#f0ebe0"/>
+  <rect x="12" y="22" width="12" height="26" fill="#f0ebe0"/>
+  <rect x="26" y="22" width="12" height="26" fill="#f0ebe0"/>
+  <rect x="40" y="22" width="12" height="26" fill="#f0ebe0"/>
+  <rect x="26" y="22" width="12" height="8" fill="#7d3129"/>
+</svg>

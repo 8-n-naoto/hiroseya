@@ -1,126 +1,137 @@
-# 実装状況
+# 実装状況（2026-08-30 時点）
 
-最終更新: 2026-08-30
+## いまどこまでできているか
 
-## 完了
+| フェーズ | 内容 | 状態 |
+|---|---|---|
+| Phase 1 | データ基盤（23テーブル・22モデル・Enum・Settings・シーダー・画像処理） | 完了 |
+| Phase 1後半 | 管理画面の基盤（認証・レイアウト・画像ライブラリ・ダッシュボード） | 完了 |
+| Phase 2 | SEO基盤（メタタグ・構造化データ・sitemap・robots） | **完了** |
+| Phase 3/4 | 公開サイトのテンプレート一式 | **完了** |
+| Phase 5 | 管理画面（料理・分類・お知らせ・イベント・トップページ） | **完了** |
+| Phase 6 | 管理画面（問い合わせ対応・メール送信） | **完了** |
+| Phase 7 | 管理画面（店舗情報・営業時間・SEO・各種設定・SNS・ユーザー・操作ログ） | **完了** |
+| Phase 8 | サイト内予約 | **未着手（ユーザー判断で今回は見送り）** |
+| Phase 9 | デザインの最終調整 | 本番想定のデザインまで実装済み。トークン調整で仕上げ可能 |
 
-### Phase 1（後半）— 管理画面の基盤
+**実機での動作確認は未実施です。** サンドボックス側は packagist.org がブロックされており、
+`composer install` ができないため、Claude 側では `php -l` と参照整合性の静的チェックのみ行っています。
 
-| 区分 | 内容 |
-| --- | --- |
-| 認証 | ログイン/ログアウト/パスワード再設定。ログイン試行はメール+IPの組で5回失敗するとロック |
-| 有効/無効 | `is_active=false` のユーザーは次のリクエストで即ログアウト（`active` ミドルウェア） |
-| 準備中モード | `preparation` ミドルウェア。ONかつ未ログインの訪問者にのみ準備中ページを表示 |
-| 共通レイアウト | `resources/views/components/layouts/admin.blade.php`。Alpineでモバイル用ドロワー |
-| 画像ライブラリ | アップロード・alt編集・使用箇所表示（料理/お知らせ/イベント/トップページを横断）・未使用時のみ削除可 |
-| ダッシュボード | 未確認予約・未対応問い合わせ・alt未入力件数・公開前チェックリスト（自動判定できる項目のみ判定） |
-| パスワード再設定メール | 標準の英語文面を日本語に差し替え（`App\Notifications\ResetPasswordNotification`） |
+---
 
-ログイン確認用の初期アカウント（`UserSeeder`、要 `migrate --seed`）:
-`owner@example.com` / `password`（管理者）、`editor@example.com` / `password`（編集者）。
-**本番投入前に必ずパスワードを変更してください。**
+## 公開サイト
 
-公開サイトの `/` は Phase 4 まで仮ページ（旧 welcome.blade.php は `route('register')` を
-参照しており未定義ルートで落ちる不具合があったため、仮の準備中案内ページに差し替え済み）。
+| URL | 内容 |
+|---|---|
+| `/` | トップページ（管理画面から段の内容・順序を変更可能） |
+| `/menu` | お品書き（店内） |
+| `/takeout` | お持ち帰り |
+| `/menu/{slug}` | 料理の詳細（`has_detail_page` が ON の料理のみ） |
+| `/news` `/news/{slug}` | お知らせ（予約公開に対応） |
+| `/events` `/events/{slug}` | イベント（開催期間で自動的に「開催中／終了」を出し分け） |
+| `/access` | アクセス・営業時間 |
+| `/contact` `/contact/complete` | お問い合わせ |
+| `/privacy` | プライバシーポリシー |
+| `/robots.txt` `/sitemap.xml` | 準備中モードと連動して内容が変わる |
 
-### Phase 1（前半）— 基盤のデータ構造
+### 設計の要点
 
-| 区分 | 内容 |
-| --- | --- |
-| マイグレーション | 23テーブル + `users` の拡張（role / is_active / last_login_at） |
-| Enum | UserRole / PublishStatus / ServiceType / ContactStatus / ReservationStatus |
-| モデル | 22モデル。リレーション・キャスト・スコープまで |
-| 設定基盤 | `App\Support\Settings`（キャッシュ付き・型付き・グループ単位の読み書き） |
-| 権限 | Gate 定義（`manage-settings` / `manage-users` / `manage-content` / `handle-inquiries`） |
-| シーダー | 13ファイル。料理64件・価格71件を含む仮データ一式 |
-| 環境設定 | タイムゾーン Asia/Tokyo、ロケール ja、`.env.example` |
-| 画像 | `ImageService`（アップロード時に WebP 3サイズ＋JPEGフォールバックを自動生成）。詳細は [IMAGES.md](IMAGES.md) |
+- **店内とお持ち帰りは別URL**。タブの中身は検索結果に出せないため、
+  「揖斐川町 うどん 持ち帰り」のような検索で拾われるようにページを分けている。
+- **お持ち帰りは「takeoutカテゴリの料理」ではなく「takeoutの価格を持つ料理」で集める**。
+  カツ丼・天丼は『丼もの』（店内）カテゴリのまま持ち帰り価格を持つため。
+- **下書き・公開予約中・提供期間外のページは、ログイン中の管理者だけが確認できる**（公開前プレビュー）。
+  未ログインには 404 を返し、あわせて noindex にする。
+- **Webフォントを使わない**。和文Webフォントは1書体で数MBあり、読み込み中の文字の入れ替わり（CLS）が
+  Core Web Vitals を確実に悪化させる。OS標準の明朝・ゴシックで組んでいる。
+- 公開ページには Tailwind も Alpine も読み込まない（`resources/css/site.css` と `resources/js/site.js`）。
+  管理画面だけが Tailwind + Alpine を使う（`app.css` / `app.js`）。
 
-### 既存写真の WebP 化（済）
+---
 
-JPG / PNG 3,897枚・10.96GB を長辺1600・品質80の WebP に変換し、**696MB**（6.4%）にした。
-エラー0件。出力は `web画像/` に元と同じフォルダ構成のまま。変換後、元の JPG / PNG と
-`Thumbs.db` / `ZbThumbnail.info` 188件は削除済み。
-印刷用メニューの PSD 242点は**現行メニューの内容と価格を持つ唯一の記録**なので残してある。
+## SEO
 
-### テーブル一覧
+- **メタタグ**：title / description / canonical / robots / OG / Twitter Card。
+  優先順位は「コントローラーの指定 → seo_metas の入力 → 自動生成」。未入力でも空にならない。
+- **構造化データ（JSON-LD）**：全ページに `Restaurant` と `WebSite`、
+  ページに応じて `BreadcrumbList` / `Menu` / `NewsArticle` / `Event`。
+  NAP（店名・住所・電話）はすべて `store_profile` が出どころで、二重管理しない。
+- **営業時間**：`openingHoursSpecification` と、臨時休業の `specialOpeningHoursSpecification` を出力。
+  管理画面で臨時休業を入れると、検索結果の営業時間表示にも反映される。
+- **準備中モードが最優先**。ONの間は、個別の指定にかかわらず全ページ noindex、
+  robots.txt は全拒否、sitemap.xml は空になる。
+- `public/.htaccess` で `robots.txt` と `sitemap.xml` を必ず Laravel へ回している
+  （Apache は存在する静的ファイルを先に返すため）。**`public/robots.txt` は残っていても問題ありません。**
 
-```
-基盤        users(拡張) / media / settings / seo_metas / activity_logs
-店舗        store_profile / business_hours / special_days
-料理        dish_categories / dishes / dish_variants / dish_media
-            allergens / allergen_dish
-記事        news / events
-トップ      home_sections / home_recommended_dishes
-問い合わせ  contacts / contact_replies
-予約        reservations / reservation_time_slots / reservation_slot_overrides
-外部連携    social_links
-```
+---
 
-### 設計上のポイント（実装に反映済み）
+## 管理画面
 
-- **価格は `dishes` ではなく `dish_variants`。** 実データに「みそ煮込み / みそ煮込みセット」
-  「みそかつ定食 / 単品」「二枚 / 三枚」「小 / 中 / 大」が存在するため。
-- **`service_type` はバリエーション側。** かつ丼を店内880円・持ち帰り900円として
-  1レコードで管理でき、写真・説明・SEOを共有できる。シーダーで実例を投入済み。
-- **`available_from` / `available_to` による自動出し分け。** 冬季限定・季節商品が常態のため。
-- **`has_detail_page`。** 全64品を個別URLにすると薄いページが量産されるので、
-  説明文を書ける料理だけ詳細ページを持たせる。
-- **営業時間は曜日別の行。** 構造化データ（openingHoursSpecification）と
-  「本日営業中」判定のため、テキスト1項目にしない。
-- **`preparation_mode`。** 仮の営業時間・価格が検索エンジンに登録されるのを防ぐ。
-- **予約はリクエスト承認制。** システムが席の空きを正確に知る必要がなく、
-  電話・店頭予約と二重管理になってもダブルブッキングが構造的に起きない。
-- **キャンセルは電話のみのため `reservation_no` を発行。** 電話口での照合用。
-  `tel` にも索引を張り、電話を受けながら検索できるようにしてある。
+| 画面 | 権限 | 内容 |
+|---|---|---|
+| ダッシュボード | 両方 | 未対応の問い合わせ・写真の抜け・公開前チェックリスト（実データから自動判定） |
+| お問い合わせ | 両方 | 一覧・詳細・返信メール送信・社内メモ・対応状況 |
+| お品書き（料理） | 両方 | CRUD・複数価格・並び替え・複製・アレルギー・提供期間 |
+| 料理の分類 | 両方 | CRUD・並び替え（料理が残っている分類は削除不可） |
+| お知らせ / イベント | 両方 | CRUD・予約公開・開催期間・記事ごとのSEO |
+| トップページ | 両方 | 各段の内容と順序、おすすめ料理の差し替え |
+| 画像ライブラリ | 両方 | まとめてアップロード・alt編集・使用箇所の横断表示・未使用時のみ削除可 |
+| 店舗情報 | 管理者 | NAPの唯一の出どころ |
+| 営業時間・臨時休業 | 管理者 | 曜日別（昼／夜の2枠）と特定日の上書き |
+| ページのSEO | 管理者 | 固定ページのタイトル・説明文・OG画像 |
+| 各種設定 | 管理者 | サイト基本・SEO・地図・メール・予約・SNS連携 |
+| SNS | 管理者 | リンクの表示設定（API連携は使わない） |
+| ユーザー | 管理者 | 追加・権限・利用停止（最後の管理者は落とせない） |
+| 操作ログ | 管理者 | 誰がいつ何を変えたか |
 
-## 検証済み
+---
 
-- 全PHPファイルの構文チェック（`php -l`）
-- `docs/check-schema.py` による静的整合性チェック（エラー0 / 警告0）
-  - Fillable・リレーション・外部キー・作成順
-  - 料理シーダーの slug 重複とカテゴリ参照
-  - 価格60件が元データ（金額.xlsx / お持ち帰りメニュー.xlsx）と一致
+## メール
 
-## 未検証
+- **SMTP設定はDBに持つ**（`settings.mail.*`）。管理画面から変更でき、パスワードは暗号化保存。
+  `APP_KEY` を失うと復号できないので、`.env` のバックアップは必ず取ること。
+- 送信は**キューに載せていない**。共用サーバーでは cron を設定しないとキューが動かず、
+  「設定漏れでメールが永久に送られない」ほうが危険なため、その場で送る。
+- **先に保存、あとで送信**。SMTPの設定ミスやサーバー障害で送信が落ちても、
+  お問い合わせ自体は DB に残り、管理画面から対応できる。
+- 送れなかった返信は `contact_replies.error_message` に残し、管理画面で赤く表示する。
 
-Claude 側のサンドボックス・デバイスVMともに packagist.org への接続がブロックされており、
-`composer install` を一度も実行できていません。そのため以下は**実機（お使いの仮想環境）でのみ検証可能**です。
+---
 
-- `composer install` が通るか（`laravel/framework` 等の依存解決）
-- `php artisan migrate --seed`
-- ログイン〜ダッシュボード〜画像アップロードの一連の画面動作
-- `npm install && npm run build`（Tailwind v4 / Alpine.js / laravel-vite-plugin）
+## 迷惑投稿対策（外部サービスを使わない）
 
-見つけた範囲は静的に確認済み：全PHPファイルの `php -l`、Bladeの `@if/@endif` 等の対応、
-ビュー内の `route()` 呼び出しが `routes/web.php` の定義と一致すること、
-コンポーネントタグ（`<x-layouts.admin>` 等）と実ファイルパスの一致。
+1. 見えない入力欄（ハニーポット）
+2. 表示から送信までの経過時間（3秒未満は弾く）
+3. 日本語を1文字も含まないのに URL が入っている本文
+4. 同一IPからの送信回数制限（1分3件 / 1日20件）
 
-## 次にやること
+reCAPTCHA 等を入れないのは、店舗側にキー管理という運用が増え、
+失効した瞬間にフォームが動かなくなるため。
 
-### Phase 2（着手）— SEO基盤
+---
 
-- [x] `robots.txt` / `sitemap.xml` を準備中モードと連動する動的ルートに変更
-      （`RobotsController` / `SitemapController`。準備中はクロール全拒否・サイトマップ空）
-- [ ] **要対応：`public/robots.txt`（静的ファイル）を削除してください。**
-      Apache は静的ファイルが存在するとLaravelのルーティングより先にそれを返すため、
-      削除しないと動的ルートが機能しません（`public/sitemap.xml` があればそれも削除）。
-      このセッションでは device 側のシェルが起動せず、Claude側からは削除できませんでした。
-- [ ] 公開サイトの各ページ用 SEO metaタグ・JSON-LD（LocalBusiness）コンポーネントは
-      Phase 4（公開サイトのテンプレート）と合わせて実装する
+## 未確定・残作業
 
-### Phase 2 以降（続き）
+- **ドメイン名が未取得**。決まり次第、`.env` の `APP_URL` を `https://…` に変更する。
+  canonical・sitemap・OG のURLはすべて `APP_URL` から作られるので、ここ1か所で切り替わる。
+- **サイト内予約（Phase 8）は未実装**。テーブル・モデル・設定項目は用意済みで、
+  `settings.reservation.enabled` は OFF のまま。予約ページとメニューの導線も出ない。
+- **ロゴのベクター原本が無い**。現在はテキストで店名を組んでいる（明朝・字間広め）。
+  ロゴができたらヘッダー・フッター・ファビコンを差し替える。
+- 実機での動作確認（`composer install` → `migrate --seed` → `npm run build` → 画面確認）。
 
-実装設計確定書 Rev.2 の Phase 2〜11 のとおり（SEO基盤・公開サイトのテンプレート・
-料理/お知らせ/イベント/予約/問い合わせの管理画面・設定画面・ユーザー管理など）。
+---
 
-## 未確定の確認事項
+## 公開までの手順
 
-| # | 内容 |
-| --- | --- |
-| A1 | ロゴのベクター原本（AI / EPS / SVG）の有無 |
-| A2 | ドメイン名と www の有無 |
-| A3 | 電話番号・席数・アクセスの照合（ポータル掲載値のため） |
-| A4 | 共用サーバーか VPS か |
-| A5 | 公開サイトのCSS方針（デザイン確定まで保留） |
-| A6 | 予約枠の実際の値（仮: 昼夜30分刻み・各枠10名） |
+1. `composer install`
+2. `cp .env.example .env` → `php artisan key:generate`
+3. 本番は `.env` の `DB_CONNECTION=mysql` と `APP_URL=https://…`、`APP_DEBUG=false`、`APP_ENV=production`
+4. `php artisan migrate --seed`
+5. `php artisan storage:link`（効かない環境の代替は `docs/SETUP.md`）
+6. `npm install && npm run build`
+7. `php artisan config:cache route:cache view:cache`
+8. 管理画面 `/login` へ。初期ユーザーは `owner@example.com` / `password` → **すぐに変更する**
+9. ダッシュボードのチェックリストを上から片付ける
+10. すべて済んだら「各種設定 → サイト基本」で**準備中モードをOFF**
+11. Google Search Console にサイトを登録し、`sitemap.xml` を送信する
