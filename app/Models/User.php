@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\UserRole;
+use App\Notifications\ResetPasswordNotification;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
@@ -48,5 +49,11 @@ class User extends Authenticatable
     public function roleLabel(): string
     {
         return $this->role->label();
+    }
+
+    /** 多言語対応は不要なため、標準の英語文面を日本語版に差し替える。 */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 }

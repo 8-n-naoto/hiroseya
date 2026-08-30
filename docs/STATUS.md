@@ -1,8 +1,27 @@
 # 実装状況
 
-最終更新: 2026-08-26
+最終更新: 2026-08-30
 
 ## 完了
+
+### Phase 1（後半）— 管理画面の基盤
+
+| 区分 | 内容 |
+| --- | --- |
+| 認証 | ログイン/ログアウト/パスワード再設定。ログイン試行はメール+IPの組で5回失敗するとロック |
+| 有効/無効 | `is_active=false` のユーザーは次のリクエストで即ログアウト（`active` ミドルウェア） |
+| 準備中モード | `preparation` ミドルウェア。ONかつ未ログインの訪問者にのみ準備中ページを表示 |
+| 共通レイアウト | `resources/views/components/layouts/admin.blade.php`。Alpineでモバイル用ドロワー |
+| 画像ライブラリ | アップロード・alt編集・使用箇所表示（料理/お知らせ/イベント/トップページを横断）・未使用時のみ削除可 |
+| ダッシュボード | 未確認予約・未対応問い合わせ・alt未入力件数・公開前チェックリスト（自動判定できる項目のみ判定） |
+| パスワード再設定メール | 標準の英語文面を日本語に差し替え（`App\Notifications\ResetPasswordNotification`） |
+
+ログイン確認用の初期アカウント（`UserSeeder`、要 `migrate --seed`）:
+`owner@example.com` / `password`（管理者）、`editor@example.com` / `password`（編集者）。
+**本番投入前に必ずパスワードを変更してください。**
+
+公開サイトの `/` は Phase 4 まで仮ページ（旧 welcome.blade.php は `route('register')` を
+参照しており未定義ルートで落ちる不具合があったため、仮の準備中案内ページに差し替え済み）。
 
 ### Phase 1（前半）— 基盤のデータ構造
 
@@ -65,22 +84,35 @@ JPG / PNG 3,897枚・10.96GB を長辺1600・品質80の WebP に変換し、**6
 
 ## 未検証
 
-`composer install` ができない環境で作成したため、**`php artisan migrate --seed` を
-実機で通していません。** 最初に実行してエラーが出たらお知らせください。
+Claude 側のサンドボックス・デバイスVMともに packagist.org への接続がブロックされており、
+`composer install` を一度も実行できていません。そのため以下は**実機（お使いの仮想環境）でのみ検証可能**です。
+
+- `composer install` が通るか（`laravel/framework` 等の依存解決）
+- `php artisan migrate --seed`
+- ログイン〜ダッシュボード〜画像アップロードの一連の画面動作
+- `npm install && npm run build`（Tailwind v4 / Alpine.js / laravel-vite-plugin）
+
+見つけた範囲は静的に確認済み：全PHPファイルの `php -l`、Bladeの `@if/@endif` 等の対応、
+ビュー内の `route()` 呼び出しが `routes/web.php` の定義と一致すること、
+コンポーネントタグ（`<x-layouts.admin>` 等）と実ファイルパスの一致。
 
 ## 次にやること
 
-### Phase 1（後半）— 管理画面の基盤
+### Phase 2（着手）— SEO基盤
 
-- [ ] 管理画面の認証（ログイン / ログアウト / パスワード再設定 / ログイン試行制限）
-- [ ] 管理画面の共通レイアウト（モバイル対応）
-- [ ] 画像ライブラリの画面（アップロード・alt入力・使用箇所表示）※変換処理は `ImageService` に実装済み
-- [ ] 準備中モードのミドルウェア
-- [ ] ダッシュボード（未確認の予約 / 未対応の問い合わせ / 公開前チェックリスト）
+- [x] `robots.txt` / `sitemap.xml` を準備中モードと連動する動的ルートに変更
+      （`RobotsController` / `SitemapController`。準備中はクロール全拒否・サイトマップ空）
+- [ ] **要対応：`public/robots.txt`（静的ファイル）を削除してください。**
+      Apache は静的ファイルが存在するとLaravelのルーティングより先にそれを返すため、
+      削除しないと動的ルートが機能しません（`public/sitemap.xml` があればそれも削除）。
+      このセッションでは device 側のシェルが起動せず、Claude側からは削除できませんでした。
+- [ ] 公開サイトの各ページ用 SEO metaタグ・JSON-LD（LocalBusiness）コンポーネントは
+      Phase 4（公開サイトのテンプレート）と合わせて実装する
 
-### Phase 2 以降
+### Phase 2 以降（続き）
 
-実装設計確定書 Rev.2 の Phase 2〜11 のとおり。
+実装設計確定書 Rev.2 の Phase 2〜11 のとおり（SEO基盤・公開サイトのテンプレート・
+料理/お知らせ/イベント/予約/問い合わせの管理画面・設定画面・ユーザー管理など）。
 
 ## 未確定の確認事項
 
