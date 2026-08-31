@@ -31,7 +31,16 @@ class SettingController extends Controller
         'social' => ['SNS連携', 'SNSのAPI連携に関する設定です。リンクの表示は「SNS」の画面で行います。'],
     ];
 
-    public function edit(?string $group, Settings $settings, MailSettings $mail): View
+    /**
+     * settings/{group?} の group は省略できる。
+     *
+     * 省略可能なルート引数には PHP 側にも既定値を与えること。
+     * 既定値が無いと Laravel は引数を埋められず、1 番目に DI の Settings を
+     * 押し込んでしまい、/admin/settings が TypeError で 500 になる
+     * （実機で発生。管理画面サイドバーの「各種設定」がこのURLを指していた）。
+     * DI を先に置き、ルート引数を末尾にするのが安全。
+     */
+    public function edit(Settings $settings, MailSettings $mail, ?string $group = null): View
     {
         $group ??= 'site';
 

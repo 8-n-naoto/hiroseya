@@ -36,7 +36,7 @@ class DishSeeder extends Seeder
         // ---------------- 温かい麺 ----------------
         ['hot-noodles', 'あんかけうどん', 'ankake-udon', [['', 880]]],
         ['hot-noodles', 'かつとじうどん', 'katsutoji-udon', [['', 920]]],
-        ['hot-noodles', 'カレーうどん', 'curry-udon', [['', 880]]],
+        ['hot-noodles', 'カレーうどん', 'curry-udon', [['', 880]], ['detail' => true]],
         ['hot-noodles', 'きつねうどん', 'kitsune-udon', [['', 720]]],
         ['hot-noodles', 'けんちんうどん', 'kenchin-udon', [['', 880]]],
         ['hot-noodles', '天とじうどん', 'tentoji-udon', [['', 980]]],
@@ -44,15 +44,15 @@ class DishSeeder extends Seeder
         ['hot-noodles', '麺セットうどん', 'men-set-udon', [['', 920]]],
 
         // ---------------- 冷たい麺 ----------------
-        ['cold-noodles', 'ころうどん', 'koro-udon', [['', 850]]],
-        ['cold-noodles', 'ざるそば', 'zaru-soba', [['', 690]]],
+        ['cold-noodles', 'ころうどん', 'koro-udon', [['', 850]], ['detail' => true]],
+        ['cold-noodles', 'ざるそば', 'zaru-soba', [['', 690]], ['detail' => true]],
         ['cold-noodles', 'たぬきそば', 'tanuki-soba', [['', 660]]],
         ['cold-noodles', 'ヒレカツころうどん', 'hirekatsu-koro-udon', [['', 1170]]],
-        ['cold-noodles', '天ざるそば', 'tenzaru-soba', [['', 1450]]],
+        ['cold-noodles', '天ざるそば', 'tenzaru-soba', [['', 1450]], ['detail' => true]],
 
         // ---------------- 煮込み ----------------
-        ['nikomi', 'みそ煮込み', 'miso-nikomi', [['', 910]], ['recommended' => true]],
-        ['nikomi', '天入りみそ煮込み', 'ten-miso-nikomi', [['', 1320]]],
+        ['nikomi', 'みそ煮込み', 'miso-nikomi', [['', 910]], ['recommended' => true, 'detail' => true]],
+        ['nikomi', '天入りみそ煮込み', 'ten-miso-nikomi', [['', 1320]], ['detail' => true]],
         ['nikomi', 'すき焼き煮込み', 'sukiyaki-nikomi', [['', 1140]]],
         ['nikomi', 'カレー煮込み', 'curry-nikomi', [['', 970]]],
 
@@ -60,20 +60,20 @@ class DishSeeder extends Seeder
         ['donburi', 'カツ丼', 'katsu-don', [
             ['', 880, ServiceType::DineIn, true],
             ['お持ち帰り', 900, ServiceType::Takeout],
-        ]],
+        ], ['detail' => true]],
         ['donburi', '天丼', 'ten-don', [
             ['', 970, ServiceType::DineIn, true],
             ['お持ち帰り', 980, ServiceType::Takeout],
-        ]],
+        ], ['detail' => true]],
         ['donburi', 'エビ丼', 'ebi-don', [['', 1050]]],
-        ['donburi', 'みそひれかつ丼', 'miso-hirekatsu-don', [['', 1130]]],
+        ['donburi', 'みそひれかつ丼', 'miso-hirekatsu-don', [['', 1130]], ['detail' => true]],
         ['donburi', '山かけ鮪丼', 'yamakake-maguro-don', [['', 1180]]],
         ['donburi', '鉄火丼', 'tekka-don', [['', 1180]]],
 
         // ---------------- 定食物 ----------------
         ['teishoku', '広瀬屋御膳', 'hiroseya-gozen', [['', 1700]], ['recommended' => true, 'detail' => true]],
         ['teishoku', 'エビフライ定食', 'ebi-fry-teishoku', [['', 1370]]],
-        ['teishoku', 'ヒレカツ定食', 'hirekatsu-teishoku', [['', 1370]]],
+        ['teishoku', 'ヒレカツ定食', 'hirekatsu-teishoku', [['', 1370]], ['detail' => true]],
         ['teishoku', 'かつなべ定食', 'katsunabe-teishoku', [['', 1220]]],
         ['teishoku', 'から揚げ定食', 'karaage-teishoku', [['', 1220]]],
         ['teishoku', 'みそかつ定食', 'misokatsu-teishoku', [['', 1220]]],
@@ -103,7 +103,7 @@ class DishSeeder extends Seeder
         ['takeout-donburi', 'みそヒレかつ丼', 'miso-hirekatsu-don-takeout', [
             ['二枚', 950, ServiceType::Takeout, true],
             ['三枚', 1150, ServiceType::Takeout],
-        ]],
+        ], ['detail' => true]],
         ['takeout-donburi', '上かつ丼', 'jo-katsu-don', [['', 1150, ServiceType::Takeout]]],
         ['takeout-donburi', '上天丼', 'jo-ten-don', [['', 1200, ServiceType::Takeout]]],
         ['takeout-donburi', '牛丼', 'gyu-don', [['', 830, ServiceType::Takeout]]],
@@ -142,6 +142,23 @@ class DishSeeder extends Seeder
     /** 冬限定・季節商品の説明に添える注記。 */
     private const LIMITED_NOTE = '冬季限定のお品書きです。提供期間は管理画面から設定できます。';
 
+    /*
+     * 詳細ページを持つ品に入れておく仮の文。
+     *
+     * 詳細ページはあっても中身が空だと「作りかけ」に見え、店舗側も
+     * どこを直せばよいか分からない。仮であることを明記した文を入れて、
+     * 書き換える場所が一目で分かるようにしておく。
+     */
+    private const DETAIL_NOTE = '＊仮の紹介文です。管理画面の「お品書き」から、お店の言葉に書き換えてください。';
+
+    private const DETAIL_BODY = <<<'TEXT'
+        ＊ここは詳細ページの本文です。仮の文が入っています。
+
+        管理画面の「お品書き」→ 該当の料理 →「詳細ページ」→「詳細本文」から書き換えられます。
+        素材の産地、だしの取り方、おすすめの召し上がり方など、この料理でしか書けないことを入れてください。
+        検索から来た方が最後まで読む理由になり、検索結果での評価にもつながります。
+        TEXT;
+
     public function run(): void
     {
         $categories = DishCategory::pluck('id', 'slug');
@@ -156,7 +173,14 @@ class DishSeeder extends Seeder
                 [
                     'category_id' => $categories[$categorySlug] ?? null,
                     'name' => $name,
-                    'description' => ($flags['limited'] ?? false) ? self::LIMITED_NOTE : null,
+                    // 詳細ページを持つ品は、説明文と本文が空だと「作りかけ」に見える。
+                    // 仮の文であることを明記したうえで入れておく。
+                    'description' => match (true) {
+                        (bool) ($flags['limited'] ?? false) => self::LIMITED_NOTE,
+                        (bool) ($flags['detail'] ?? false) => self::DETAIL_NOTE,
+                        default => null,
+                    },
+                    'body' => ($flags['detail'] ?? false) ? self::DETAIL_BODY : null,
                     'is_recommended' => $flags['recommended'] ?? false,
                     'is_limited' => $flags['limited'] ?? false,
                     'has_detail_page' => $flags['detail'] ?? false,

@@ -900,6 +900,43 @@ ul, ol {
     letter-spacing: 0.08em;
 }
 
+/*
+ * 詳細ページを持つ品の見せ方。
+ *
+ * このサイトは a { color: inherit; text-decoration: none } を基本にしている
+ * （紙のお品書きに寄せるため）。その結果、詳細ページのある品名とただの品名が
+ * まったく同じ見た目になり、詳細ページに誰もたどり着けなかった。
+ * 弁柄の細い罫と「詳しく →」の二つで、押せることを示す。
+ */
+.menu-row__link {
+    border-bottom: 1px solid var(--rule-strong);
+    padding-bottom: 2px;
+}
+
+.menu-row__link:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.menu-row__more {
+    margin-left: 10px;
+    font-family: var(--font-gothic);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    white-space: nowrap;
+    vertical-align: 1px;
+}
+
+.menu-row__more::after {
+    content: "→";
+    margin-left: 3px;
+}
+
+.menu-row__more:hover {
+    color: var(--accent-soft);
+}
+
 .menu-row__leader {
     flex: 1 1 auto;
     height: 1px;
@@ -993,6 +1030,19 @@ ul, ol {
 
 @media (min-width: 940px) {
     .card-grid--3 { grid-template-columns: repeat(3, 1fr); }
+}
+
+/*
+ * カード全体を包む <a>。既定のインラインのままだと、写真と見出しの間の余白が
+ * 押せず「押せるはずの場所が反応しない」状態になる。ブロックにして面で受ける。
+ */
+.card > a {
+    display: block;
+    color: inherit;
+}
+
+.card > a:hover .card__title {
+    color: var(--accent);
 }
 
 .card__media {
@@ -1599,8 +1649,15 @@ body:has(.mobile-cta) .site-footer {
     .mobile-cta,
     .menu-tabs,
     .menu-index,
-    .crumbs {
+    .crumbs,
+    /* 紙に刷ると押せないので、詳細ページへの誘導は落とす。 */
+    .menu-row__more {
         display: none !important;
+    }
+
+    /* 罫も紙では意味を持たないため外す。 */
+    .menu-row__link {
+        border-bottom: none;
     }
 
     body {

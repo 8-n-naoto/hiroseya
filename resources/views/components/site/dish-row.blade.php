@@ -23,9 +23,21 @@
     <div class="menu-row__body">
         <div class="menu-row__line">
             <span class="menu-row__name">
-                @if ($link)<a href="{{ $link }}">{{ $dish->name }}</a>@else{{ $dish->name }}@endif
+                {{-- 詳細ページを持つ品だけがリンクになる。全体で a { color: inherit;
+                     text-decoration: none } を効かせているため、罫と「詳しく」の
+                     二つで印を付けないと、リンクだと気づかれないまま素通りされる。 --}}
+                @if ($link)
+                    <a href="{{ $link }}" class="menu-row__link">{{ $dish->name }}</a>
+                @else
+                    {{ $dish->name }}
+                @endif
                 @if ($main && $main->label)
                     <span style="font-size:13px;color:var(--ink-faint);">（{{ $main->label }}）</span>
+                @endif
+                @if ($link)
+                    {{-- 品名と同じ行き先。読み上げとキーボードでは重複するだけなので
+                         そちらからは外し、目と指のための印としてだけ置く。 --}}
+                    <a href="{{ $link }}" class="menu-row__more" aria-hidden="true" tabindex="-1">詳しく</a>
                 @endif
             </span>
             <span class="menu-row__leader" aria-hidden="true"></span>

@@ -23,14 +23,20 @@ cd /var/www/apps/hiroseya
 php artisan storage:link
 php artisan db:seed --force
 
-# 1) 仮画像の実ファイルを storage に展開
-bash database/placeholders/install.sh
+# 1) 仮画像の実ファイルを storage に展開（必ず root で。chown apache:apache が要る）
+sudo bash database/placeholders/install.sh
 
 # 2) DB に仮画像レコードを入れて紐付ける
 mysql -u <user> -p <database> < database/placeholders/placeholder_media.sql
 
 # 3) キャッシュを捨てる
 php artisan optimize:clear
+```
+
+ファイルが Web から見えているかは次で確かめられる（200 なら OK）。
+
+```bash
+curl -sI http://192.168.154.10:8002/storage/placeholder/hero_md.jpg | head -3
 ```
 
 SQL の最後に確認用の SELECT が入っている。
@@ -40,7 +46,7 @@ SQL の最後に確認用の SELECT が入っている。
 
 ```bash
 mysql -u <user> -p <database> < database/placeholders/rollback.sql
-rm -rf storage/app/public/placeholder     # 実ファイルも消す場合
+sudo rm -rf storage/app/public/placeholder     # 実ファイルも消す場合
 ```
 
 `media` から消すだけでよい。`dishes.main_media_id` などの外部キーは
